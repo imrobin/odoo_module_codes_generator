@@ -21,7 +21,7 @@ def get_content(obj):
     if hasattr(obj, 'read') is True:
         return obj.read().encode('utf8')
     else:
-        with open(obj, 'r') as f:
+        with open(obj, 'r', encoding='utf-8') as f:
             content = f.read()
         return content
 
@@ -33,7 +33,7 @@ def get_field_class(name, field_type):
     :param field_type:
     :return:
     '''
-    if field_type in ['varchar255', 'char255']:
+    if field_type in ['varchar', 'char']:
         return StringField(name)
     elif field_type in ['text']:
         return TextField(name)
@@ -45,7 +45,9 @@ def get_field_class(name, field_type):
         return BoolField(name)
     elif field_type in ['date']:
         return DateField(name)
-    elif field_type in ['time0']:
+    elif field_type in ['time']:
+        return DateTimeField(name)
+    elif field_type in ['timestamp']:
         return DateTimeField(name)
     elif field_type in ['bytea']:
         return BinaryField(name)
@@ -90,6 +92,7 @@ class Parse(object):
         :param statement:
         :return:
         '''
+        print('create table:', statement)
         create_fields = {}
         for token in statement.tokens:
             if isinstance(token, Identifier) is True and token.value != '':
@@ -100,11 +103,15 @@ class Parse(object):
             elif isinstance(token, Parenthesis) is True and token.value != '':
                 insert_sqls = token.value.replace('(', '').replace(')', '').split(',')
                 for insert_sql in insert_sqls:
+                    insert_sql = insert_sql.strip();
                     insert_sql_list = insert_sql.split(' ')
                     field_name = insert_sql_list[0].replace('"', '')
                     # 主键字段不做操作
                     if 'PRIMARY KEY' not in insert_sql and field_name.lower() != 'id':
-                        field_class = get_field_class(field_name, insert_sql_list[1])
+                        field_type = insert_sql_list[1]
+                        field_type = re.sub('\\d+', '', field_type)
+                        field_class = get_field_class(field_name, field_type)
+                        print('field_name:', field_name, 'field_type:', field_type, 'field_class:', field_class)
                         if field_class is not None:
                             # 必填字段
                             if 'NOT NULL' in insert_sql:
@@ -123,6 +130,7 @@ class Parse(object):
         :param statement:
         :return:
         '''
+        print('table comment:', statement)
         comment_group = re.search(r'COMMENT ON TABLE (.*?) IS (.*?);', statement.value)
         assert comment_group is not None
         groups = comment_group.groups()
@@ -143,7 +151,10 @@ class Parse(object):
         model_name = relation[0]
         field_name = relation[1]
         field_string_name = comment_group.groups()[1].replace('"', '').replace('\'', '')
-        SQL_MODEL_DICT[model_name].search_field(field_name).string_name = field_string_name
+        md = SQL_MODEL_DICT[model_name].search_field(field_name)
+        print(md, statement);
+        if md is not None:
+            md.string_name = field_string_name
 
     @staticmethod
     def _parse_for_constraint_model(statement):
@@ -216,7 +227,7 @@ class Parse(object):
             return path
         else:
             if os.path.exists(path) is False and os.path.isfile(path) is False:
-                open(path, 'w').close()
+                open(path, 'w', encoding='utf-8').close()
             return path
 
     def create_files(self, path, thread_num=2):

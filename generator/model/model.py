@@ -22,8 +22,9 @@ class BaseModel(object):
 
     def create_model_files(self, path):
         py_path = os.path.join(path, '%s.py' % self.table_name.replace('.', '_'))
-        with open(py_path, 'w') as f:
+        with open(py_path, 'w', encoding='utf-8') as f:
             f.writelines([
+                "# -*- coding: utf-8 -*-\n\n",
                 "from odoo import models, fields\n\n\n",
                 "class {}(models.Model):\n".format(
                     ''.join(list(map(lambda x: x.capitalize(), self.table_name.split('.'))))),
@@ -40,7 +41,7 @@ class BaseModel(object):
 
     def create_view_files(self, path):
         view_path = os.path.join(path, '%s_view.xml' % self.table_name.replace('.', '_'))
-        with open(view_path, 'w') as f:
+        with open(view_path, 'w', encoding='utf-8') as f:
             tree_code = ""
             form_code = ""
             if len(self.fields) > 0:
@@ -48,7 +49,7 @@ class BaseModel(object):
                     tree_code += " " * 20 + "<field name=\"{}\"/>\n".format(self.fields[field_key].name)
                     form_code += " " * 24 + "<field name=\"{}\"/>\n".format(self.fields[field_key].name)
             f.writelines([
-                "<?xml version=\"1.0\" encoding=\"utf-8\" ?>",
+                "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n",
                 "<odoo>\n",
                 " " * 4 + "<data>\n",
                 # tree的xml代码
